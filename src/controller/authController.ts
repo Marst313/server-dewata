@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 
 import { db } from '../config/database';
-import { userModel } from '../db/schema/user';
 import { handleError, handleSuccess } from '../utils/responseHandler';
 
 export async function signIn(req: Request, res: Response) {
@@ -25,12 +24,14 @@ export async function signIn(req: Request, res: Response) {
 export async function signUp(req: Request, res: Response) {
   try {
     const { email, password, name } = req.body;
-    const newUser = await db.insert(userModel).values({ email, password, name }).returning();
+
+    const result = await db.query('INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING *', [email, password, name]);
+    const newUser = result.rows[0];
 
     return handleSuccess(res, 201, 'Berhasil mendaftar', {
-      email: newUser[0].email,
-      name: newUser[0].name,
-      id: newUser[0].id,
+      email: newUser.email,
+      name: newUser.name,
+      id: newUser.id,
       accessToken: req.session.token,
     });
   } catch (error) {

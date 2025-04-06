@@ -1,13 +1,11 @@
 import { Request, Response } from 'express';
 import { db } from '../config/database';
-import { pelangganModel } from '../db/schema/pelanggan';
-import { sql } from 'drizzle-orm';
 import { handleError, handleSuccess } from '../utils/responseHandler';
 
 // GET ALL PELANGGAN (Distinct based on nama_pemilik and nama_hewan, with latest tanggal_periksa)
 export async function getAllPelanggan(req: Request, res: Response) {
   try {
-    const result = await db.execute(sql`
+    const result = await db.query(`
       SELECT DISTINCT ON (nama_pemilik, nama_hewan)
         id,
         nama_pemilik AS "namaPemilik",
@@ -43,12 +41,8 @@ export async function getPelangganById(req: Request, res: Response) {
   if (!id) return handleError(res, 400, 'ID pelanggan tidak boleh kosong');
 
   try {
-    const pelanggan = await db
-      .select()
-      .from(pelangganModel)
-      .where(sql`${pelangganModel.id} = ${id}`)
-      .limit(1)
-      .then((result) => result[0]);
+    const result = await db.query(`SELECT * FROM pelanggan WHERE id = $1 LIMIT 1`, [id]);
+    const pelanggan = result.rows[0];
 
     if (!pelanggan) return handleError(res, 404, 'Pelanggan tidak ditemukan');
 
@@ -68,23 +62,16 @@ export async function createPelanggan(req: Request, res: Response) {
   }
 
   try {
-    const pelanggan = await db
-      .insert(pelangganModel)
-      .values({
-        namaPemilik,
-        namaHewan,
-        jenisHewan,
-        jenisKelamin,
-        umur,
-        tipeUmur,
-        anamnesa,
-        tanggalPeriksa,
-        terapi,
-        dokter,
-      })
-      .returning();
+    const result = await db.query(
+      `INSERT INTO pelanggan (
+        nama_pemilik, nama_hewan, jenis_hewan, jenis_kelamin, umur,
+        tipe_umur, anamnesa, tanggal_periksa, terapi, dokter
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [namaPemilik, namaHewan, jenisHewan, jenisKelamin, umur, tipeUmur, anamnesa, tanggalPeriksa, terapi, dokter]
+    );
 
-    return handleSuccess(res, 201, 'Pelanggan berhasil dibuat', pelanggan);
+    return handleSuccess(res, 201, 'Pelanggan berhasil dibuat', result.rows);
   } catch (error) {
     console.error(error);
     return handleError(res, 500, 'Internal Server Error');
@@ -102,26 +89,26 @@ export async function updatePelanggan(req: Request, res: Response) {
   }
 
   try {
-    const pelanggan = await db
-      .update(pelangganModel)
-      .set({
-        namaPemilik,
-        namaHewan,
-        jenisHewan,
-        jenisKelamin,
-        umur,
-        tipeUmur,
-        anamnesa,
-        tanggalPeriksa,
-        terapi,
-        dokter,
-      })
-      .where(sql`${pelangganModel.id} = ${id}`)
-      .returning();
+    const result = await db.query(
+      `UPDATE pelanggan SET
+        nama_pemilik = $1,
+        nama_hewan = $2,
+        jenis_hewan = $3,
+        jenis_kelamin = $4,
+        umur = $5,
+        tipe_umur = $6,
+        anamnesa = $7,
+        tanggal_periksa = $8,
+        terapi = $9,
+        dokter = $10
+      WHERE id = $11
+      RETURNING *`,
+      [namaPemilik, namaHewan, jenisHewan, jenisKelamin, umur, tipeUmur, anamnesa, tanggalPeriksa, terapi, dokter, id]
+    );
 
-    if (!pelanggan.length) return handleError(res, 404, 'Pelanggan tidak ditemukan');
+    if (!result.rows.length) return handleError(res, 404, 'Pelanggan tidak ditemukan');
 
-    return handleSuccess(res, 200, 'Pelanggan berhasil diupdate', pelanggan);
+    return handleSuccess(res, 200, 'Pelanggan berhasil diupdate', result.rows);
   } catch (error) {
     console.error(error);
     return handleError(res, 500, 'Internal Server Error');
@@ -134,7 +121,7 @@ export async function deletePelanggan(req: Request, res: Response) {
   if (!id) return handleError(res, 400, 'ID pelanggan tidak boleh kosong');
 
   try {
-    await db.delete(pelangganModel).where(sql`${pelangganModel.id} = ${id}`);
+    await db.query(`DELETE FROM pelanggan WHERE id = $1`, [id]);
     return handleSuccess(res, 200, 'Pelanggan berhasil dihapus');
   } catch (error) {
     console.error(error);
@@ -150,14 +137,11 @@ export async function searchPelangganDetail(req: Request, res: Response) {
   }
 
   try {
-    const pelanggan = await db
-      .select()
-      .from(pelangganModel)
-      .where(sql`nama_pemilik ILIKE ${`%${namaPemilik}%`} AND nama_hewan ILIKE ${`%${namaHewan}%`}`);
+    const result = await db.query(`SELECT * FROM pelanggan WHERE nama_pemilik ILIKE $1 AND nama_hewan ILIKE $2`, [`%${namaPemilik}%`, `%${namaHewan}%`]);
 
     return handleSuccess(res, 200, 'Data pelanggan detail berhasil ditemukan', {
-      result: pelanggan.length,
-      data: pelanggan,
+      result: result.rows.length,
+      data: result.rows,
     });
   } catch (error) {
     console.error(error);

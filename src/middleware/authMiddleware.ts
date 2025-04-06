@@ -1,10 +1,8 @@
-import { eq } from 'drizzle-orm';
 import { compareSync, hash } from 'bcrypt';
 import { NextFunction, Request, Response } from 'express';
 import { sign, verify } from 'jsonwebtoken';
 
 import { db } from '../config/database';
-import { userModel } from '../db/schema/user';
 import { handleError } from '../utils/responseHandler';
 
 const SECRET_KEY = process.env.SECRET_KEY as string;
@@ -20,14 +18,10 @@ function setTokenCookie(res: Response, token: string) {
 export async function SignInMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) return handleError(res, 400, 'Email atau password tidak boleh kosong');
 
-    const user = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.email, email))
-      .then((res) => res[0]);
+    const result = await db.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
+    const user = result.rows[0];
 
     if (!user || !compareSync(password, user.password)) {
       return handleError(res, 401, 'Email atau password salah');
@@ -48,20 +42,10 @@ export async function SignInMiddleware(req: Request, res: Response, next: NextFu
 export async function SignUpMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const { email, password, name } = req.body;
+    if (!email || !password || !name) return handleError(res, 400, 'Nama, email, dan password wajib diisi');
 
-    if (!email || !password || !name) {
-      return handleError(res, 400, 'Nama, email, dan password wajib diisi');
-    }
-
-    const existingUser = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.email, email))
-      .then((res) => res[0]);
-
-    if (existingUser) {
-      return handleError(res, 400, 'Email sudah terdaftar');
-    }
+    const result = await db.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
+    if (result.rows.length > 0) return handleError(res, 400, 'Email sudah terdaftar');
 
     req.body.password = await hash(password, 10);
     return next();
@@ -77,12 +61,8 @@ export async function Protect(req: Request, res: Response, next: NextFunction) {
     if (!token) return handleError(res, 401, 'Autentikasi gagal, silakan login kembali');
 
     const payload = verify(token, SECRET_KEY) as { email: string };
-
-    const user = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.email, payload.email))
-      .then((res) => res[0]);
+    const result = await db.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [payload.email]);
+    const user = result.rows[0];
 
     if (!user) return handleError(res, 401, 'Autentikasi gagal, user tidak ditemukan');
 
