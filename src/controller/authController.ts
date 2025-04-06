@@ -27,7 +27,12 @@ export async function signUp(req: Request, res: Response) {
     const { email, password, name } = req.body;
     const newUser = await db.insert(userModel).values({ email, password, name }).returning();
 
-    return handleSuccess(res, 201, 'Berhasil mendaftar', newUser[0]);
+    return handleSuccess(res, 201, 'Berhasil mendaftar', {
+      email: newUser[0].email,
+      name: newUser[0].name,
+      id: newUser[0].id,
+      accessToken: req.session.token,
+    });
   } catch (error) {
     console.error(error);
     return handleError(res, 500, 'Terjadi kesalahan');
