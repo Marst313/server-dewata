@@ -16,8 +16,8 @@ export default defineConfig({
     port: Number(process.env.DB_PORT),
     url: process.env.DATABASE_URL!,
     ssl: {
-      rejectUnauthorized: true,
-      ca: fs.readFileSync(caPath).toString(),
+      rejectUnauthorized: false,
+      // ca: fs.readFileSync(caPath).toString(),
     },
   },
 });
