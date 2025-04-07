@@ -1,10 +1,11 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import dotenv from 'dotenv';
 
 import authRouter from './route/authRoutes';
 import pelangganRouter from './route/pelangganRoutes';
+import { handleError } from './utils/responseHandler';
 
 dotenv.config();
 
@@ -36,5 +37,9 @@ app.use(express.urlencoded({ extended: false }));
 // Routes
 app.use('/auth', authRouter);
 app.use('/api/v1/pelanggan', pelangganRouter);
+
+app.all('*', (req: Request, res: Response, next: NextFunction) => {
+  return next(handleError(res, 404, 'Route not found'));
+});
 
 export default app;
