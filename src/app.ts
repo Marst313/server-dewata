@@ -13,7 +13,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: [process.env.ORIGIN as string, 'http://localhost:5173'],
+    origin: [process.env.ORIGIN as string, 'http://localhost:5173', 'https://dewata.vercel.app'],
     credentials: true,
   })
 );
