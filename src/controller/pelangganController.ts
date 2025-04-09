@@ -137,9 +137,62 @@ export async function searchPelangganDetail(req: Request, res: Response) {
   }
 
   try {
-    const result = await db.query(`SELECT * FROM pelanggan WHERE nama_pemilik ILIKE $1 AND nama_hewan ILIKE $2`, [`%${namaPemilik}%`, `%${namaHewan}%`]);
+    const result = await db.query(
+      `SELECT id,
+        nama_pemilik AS "namaPemilik",
+        nama_hewan AS "namaHewan",
+        jenis_hewan AS "jenisHewan",
+        jenis_kelamin AS "jenisKelamin",
+        umur,
+        tipe_umur AS "tipeUmur",
+        anamnesa,
+        terapi,
+        dokter,
+        tanggal_periksa AS "tanggalPeriksa" 
+        FROM pelanggan WHERE nama_pemilik ILIKE $1 AND nama_hewan ILIKE $2`,
+      [`%${namaPemilik}%`, `%${namaHewan}%`]
+    );
 
     return handleSuccess(res, 200, 'Data pelanggan detail berhasil ditemukan', {
+      result: result.rows.length,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
+    return handleError(res, 500, 'Internal Server Error');
+  }
+}
+
+export async function recapPelangganDetail(req: Request, res: Response) {
+  try {
+    const { startDate, endDate } = req.body;
+
+    if (!startDate || !endDate) {
+      return handleError(res, 400, 'Tanggal awal dan tanggal akhir harus diisi!');
+    }
+
+    const result = await db.query(
+      `
+      SELECT 
+        id,
+        nama_pemilik AS "namaPemilik",
+        nama_hewan AS "namaHewan",
+        jenis_hewan AS "jenisHewan",
+        jenis_kelamin AS "jenisKelamin",
+        umur,
+        tipe_umur AS "tipeUmur",
+        anamnesa,
+        terapi,
+        dokter,
+        tanggal_periksa AS "tanggalPeriksa"
+      FROM pelanggan
+      WHERE tanggal_periksa BETWEEN $1 AND $2
+      ORDER BY tanggal_periksa ASC;
+    `,
+      [startDate, endDate]
+    );
+
+    return handleSuccess(res, 200, 'Data recap pelanggan berhasil ditemukan', {
       result: result.rows.length,
       data: result.rows,
     });
