@@ -1,5 +1,5 @@
-import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
+import { Pool } from "pg";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
@@ -37,16 +37,19 @@ export const testConnection = async () => {
         tipe_umur VARCHAR(20),
         anamnesa TEXT,
         terapi TEXT,
+        diagnosa TEXT,
         dokter VARCHAR(100),
         tanggal_periksa DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✅ Database seed created successfully.');
+
+    await client.query(`ALTER TABLE pelanggan ADD COLUMN IF NOT EXISTS diagnosa TEXT;`);
+    console.log("✅ Database seed created successfully.");
     client.release();
     return true;
   } catch (error) {
-    console.error('❌ Error connecting to database:', error instanceof Error ? error.message : String(error));
+    console.error("❌ Error connecting to database:", error instanceof Error ? error.message : String(error));
     return false;
   }
 };
